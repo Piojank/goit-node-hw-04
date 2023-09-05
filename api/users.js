@@ -1,15 +1,16 @@
 const express = require("express");
-const { auth } = require("../middlewares");
+const { auth, validation } = require("../middlewares");
 const router = express.Router();
 const usersTask = require("../controller/usersController");
+const { joiSignupSchema, joiLoginSchema } = require("../service/schemas/userSchema");
 
 router.get("/", usersTask.listUsers);
 
-router.post("/signup", usersTask.signUp);
+router.post("/signup", validation(joiSignupSchema), usersTask.signUp);
 
-router.post("/login", auth, usersTask.logIn);
+router.post("/login", validation(joiLoginSchema), usersTask.logIn);
 
-router.get("/current", usersTask.getCurrent);
+router.get("/current", auth, usersTask.getCurrent);
 
 router.get("/logout", auth, usersTask.logOut);
 
