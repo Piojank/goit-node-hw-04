@@ -1,14 +1,13 @@
-const service = require("../service/usersService");
+const userService = require("../service/usersService");
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcryptjs')
-const { User } = require('../service/schemas/userSchema');
 
 require("dotenv").config();
 const secret = process.env.SECRET;
 
 const listUsers = async (req, res) => {
     try {
-        const result = await service.listUsers();
+        const result = await userService.listUsers();
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -17,7 +16,7 @@ const listUsers = async (req, res) => {
 
 const signUp = async (req, res, next) => {
     const { password, email, subscription, token } = req.body
-    const user = await service.findOne({ email });
+    const user = await userService.userSignUp({ email });
 
     if (user) {
         return res.status(409).json({
@@ -29,7 +28,7 @@ const signUp = async (req, res, next) => {
 
     try {
         const hashPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-        await User.create({ 
+        await userService.userSignUp({ 
             password: hashPassword, 
             email, 
             subscription, 
@@ -39,8 +38,8 @@ const signUp = async (req, res, next) => {
             status: 'success',
             data: {
                     user: {
-                    email,
-                    subscription
+                        email,
+                        subscription
                 },
             },
         });
@@ -51,20 +50,13 @@ const signUp = async (req, res, next) => {
 
 const logIn = async (req, res, next) => {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await userService.userLogIn({ email });
 
     if (!user || user.validPassword(password)) {
         return res.status(400).json({
             status: 'Error',
             message: 'Incorrect email or password',
             data: 'Bad request',
-        });
-    }
-
-    if (!user.verify) {
-        return res.status(400).json({
-            status: 'Error',
-            message: 'User not verified!',
         });
     }
 
@@ -78,7 +70,7 @@ const logIn = async (req, res, next) => {
             expiresIn: '1h',
         });
 
-        await User.findByIdAndUpdate(
+        await userService.updateStatusUser(
             { _id: user._id },
             { token }
         );
@@ -88,8 +80,8 @@ const logIn = async (req, res, next) => {
             data: {
                 token,
                 user: {
-                email: user.email,
-                subscription: user.subscription,
+                    email: user.email,
+                    subscription: user.subscription,
                 },
             },
         });
@@ -99,11 +91,10 @@ const logIn = async (req, res, next) => {
 };
 
 const logOut = async (req, res, next) => {
-    const { _id } = req.user;
     try {
-        await User.findOneAndUpdate(
-            { _id: _id },
-            { token: null }
+        const { _id } = req.user;
+        await userService.updateStatusUser(
+            _id, { token: null }
         );
         res.status(204).end();
     } catch (error) {
@@ -112,8 +103,8 @@ const logOut = async (req, res, next) => {
 };
 
 const getCurrent = async (req, res, next) => {
-    const { email, subscription } = req.user
     try {
+        const { email, subscription } = req.user;
         res.status(200).json({
             status: 'Success',
             data: {
@@ -131,21 +122,20 @@ const updateStatusUser = async (req, res, next) => {
     try {
         const { _id } = req.user;
         const { subscription } = req.body;
-        const result = await User.findByIdAndUpdate({
-            _id: _id,
-        });
-        if (!result) {
-            res.status(404).json({ 
+        const updatedUser = await userService.updateSubscriptionUser(
+                _id, 
+                subscription,
+            );
+
+        if (!updatedUser) {
+            return res.status(404).json({ 
                 error: 'Not found' 
             });
         }
-        result.subscription = subscription;
-        await result.save();
-        res.status(200).json(result);
+
+        res.status(200).json(updatedUser);
     } catch (error) {
-        res.status(400).json({
-            status: 'Error',
-        });
+        next(error);
     }
 };
 

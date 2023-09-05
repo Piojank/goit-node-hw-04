@@ -19,7 +19,7 @@ const userSchema = new Schema(
         subscription: {
             type: String,
             enum: ["starter", "pro", "business"],
-            default: "starter"
+            default: "starter",
         },
         token: {
             type: String,
@@ -49,10 +49,15 @@ const joiLoginSchema = Joi.object({
     password: Joi.string().required(),
 });
 
+const joiSubscriptionSchema = Joi.object({
+    subscription: Joi.string().valid('starter', 'pro', 'business').required(),
+});
+
 const User = mongoose.model("user", userSchema);
 
 module.exports = {
     User,
     joiLoginSchema,
-    joiSignupSchema
+    joiSignupSchema,
+    joiSubscriptionSchema
 };
