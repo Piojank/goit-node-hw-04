@@ -3,7 +3,7 @@ const Joi = require('joi')
 
 const contactSchema = new Schema(
     {
-        title: {
+        name: {
             type: String,
             required: [true, 'Set name for contact']
         },
